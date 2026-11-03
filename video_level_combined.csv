@@ -1,0 +1,5 @@
+video_clip,true_label,predicted_label,mean_confidence,frames_evaluated,correct,true_behavior,predicted_behavior_3class,mean_confidence_3class
+Eating_25690518092326646,active,active,0.8723786,25,True,Eating,Eating,0.97149247
+Locomotion_25690518091210873,active,active,0.88531446,25,True,Locomotion,Locomotion,0.9749965
+Locomotion_25690518091847591,active,active,0.9147713,25,True,Locomotion,Locomotion,0.7978505
+Resting_25690519194109670,inactive,inactive,0.63698786,25,True,Resting,Resting,0.66786

@@ -1,0 +1,5 @@
+video_clip,true_behavior,predicted_behavior,mean_confidence,frames_evaluated,correct
+Eating_25690518092326646,Eating,Eating,0.97149247,25,True
+Locomotion_25690518091210873,Locomotion,Locomotion,0.9749965,25,True
+Locomotion_25690518091847591,Locomotion,Locomotion,0.7978505,25,True
+Resting_25690519194109670,Resting,Resting,0.66786,25,True

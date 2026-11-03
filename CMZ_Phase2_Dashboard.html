@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Civet Behavior Log</title>
+<style>
+  :root {
+    --bg: #F7F5EF; --panel: #FFFFFF; --fg: #1A2B22; --fg-muted: #5B6B60;
+    --border: #E3DCC9; --accent: #B9842B; --ok: #3F7D52;
+    --c-eating: #B9842B; --c-locomotion: #3F7D52; --c-resting: #6E7C92; --c-climbing: #8C5B3F;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10180F; --panel: #192219; --fg: #EFEAD9; --fg-muted: #A9B4A4;
+      --border: #2B3A2B; --accent: #E0A542; --ok: #6FBF83;
+      --c-eating: #E0A542; --c-locomotion: #6FBF83; --c-resting: #93A4C2; --c-climbing: #C98A64;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10180F; --panel: #192219; --fg: #EFEAD9; --fg-muted: #A9B4A4;
+    --border: #2B3A2B; --accent: #E0A542; --ok: #6FBF83;
+    --c-eating: #E0A542; --c-locomotion: #6FBF83; --c-resting: #93A4C2; --c-climbing: #C98A64;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: Calibri, "Segoe UI", system-ui, -apple-system, sans-serif;
+    padding: 28px 16px 60px;
+  }
+  .page { max-width: 54rem; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .hdr h1 { font-family: Cambria, Georgia, serif; font-weight: 400; font-size: 1.9rem; margin: 0 0 6px; }
+  .hdr p { margin: 0; color: var(--fg-muted); font-size: 0.95rem; }
+
+  .latest { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .latest-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .latest-text .label { font-size: 0.75rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  .latest-text .value { font-family: Cambria, Georgia, serif; font-size: 1.5rem; }
+  .latest-text .when { font-size: 0.85rem; color: var(--fg-muted); }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+  .card .note { font-size: 0.8rem; color: var(--fg-muted); margin: 0 0 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  th { color: var(--fg-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .02em; }
+  .behavior-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .conf-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .conf-track { flex: 1; background: var(--border); border-radius: 6px; height: 8px; min-width: 60px; max-width: 110px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 6px; }
+  .conf-pct { font-size: 0.82rem; color: var(--fg-muted); min-width: 2.8rem; }
+
+  .bars { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 7.5rem 1fr 4.5rem; align-items: center; gap: 8px; font-size: 0.85rem; }
+  .bar-track2 { background: var(--border); border-radius: 6px; height: 18px; overflow: hidden; }
+  .bar-fill2 { height: 100%; border-radius: 6px; }
+
+  .upload-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; font-size: 0.8rem; }
+  .upload-row label.btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); cursor: pointer; color: var(--fg);
+  }
+  .upload-row label.btn:hover { border-color: var(--accent); }
+  .upload-row input[type=file] { display: none; }
+  .upload-status { color: var(--fg-muted); }
+  .upload-status.ok { color: var(--ok); }
+  .upload-status.err { color: #B4524A; }
+
+  .footer { font-size: 0.75rem; color: var(--fg-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hdr">
+    <h1>Civet Behavior Log</h1>
+    <p>Behavior detected from enclosure camera footage, Chiang Mai Zoo</p>
+  </div>
+
+  <div class="latest" id="latestCard">
+    <div class="latest-dot" id="latestDot"></div>
+    <div class="latest-text">
+      <div class="label">Most recent observation</div>
+      <div class="value" id="latestBehavior">—</div>
+      <div class="when" id="latestWhen">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Observation log</h2>
+    <p class="note">What the civet was doing, by camera timestamp</p>
+    <table>
+      <thead><tr><th>Date</th><th>Time</th><th>Behavior</th><th>Detection confidence</th></tr></thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div class="upload-row">
+      <label class="btn">⤒ Load new observation data (CSV)
+        <input type="file" id="dataUpload" accept=".csv">
+      </label>
+      <span class="upload-status" id="uploadStatus">showing saved observations</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Behavior breakdown</h2>
+    <p class="note">How often each behavior was observed in this log</p>
+    <div class="bars" id="breakdownBars"></div>
+  </div>
+
+  <div class="footer">Civet behavior detection — Chiang Mai Zoo</div>
+
+</div>
+
+<script>
+  const BEHAVIOR_COLOR = {
+    Eating: "var(--c-eating)",
+    Locomotion: "var(--c-locomotion)",
+    Resting: "var(--c-resting)",
+    Climbing: "var(--c-climbing)",
+  };
+
+  function parseCSV(text) {
+    const lines = text.replace(/\r/g, "").split("\n").filter((l) => l.length > 0);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(",").map((h) => h.trim());
+    return lines.slice(1).map((line) => {
+      const cells = line.split(",");
+      const row = {};
+      headers.forEach((h, i) => { row[h] = (cells[i] ?? "").trim(); });
+      return row;
+    });
+  }
+
+  // The clip filename encodes the camera's own timestamp: Thai Buddhist
+  // calendar YYYYMMDDHHMMSSmmm (year - 543 = Gregorian year).
+  function parseClipTimestamp(videoClip) {
+    const m = videoClip.match(/(\d{17})$/);
+    if (!m) return null;
+    const s = m[1];
+    const beYear = parseInt(s.slice(0, 4), 10);
+    const month = s.slice(4, 6), day = s.slice(6, 8);
+    const hour = s.slice(8, 10), min = s.slice(10, 12), sec = s.slice(12, 14);
+    const year = beYear - 543;
+    const dt = new Date(Date.UTC(year, parseInt(month, 10) - 1, parseInt(day, 10), parseInt(hour, 10), parseInt(min, 10), parseInt(sec, 10)));
+    if (isNaN(dt.getTime())) return null;
+    return { dt, dateStr: `${year}-${month}-${day}`, timeStr: `${hour}:${min}:${sec}` };
+  }
+
+  function behaviorFromRow(r) {
+    // Prefer the specific behavior (Eating/Locomotion/Resting/Climbing) when present;
+    // fall back to the Active/Inactive label if only that's in the file.
+    if (r.predicted_behavior) return r.predicted_behavior;
+    if (r.true_behavior) return r.true_behavior;
+    if (r.predicted_label) return r.predicted_label.toLowerCase() === "active" ? "Active" : "Inactive";
+    return "Unknown";
+  }
+
+  function confFromRow(r) {
+    return parseFloat(r.mean_confidence_3class ?? r.mean_confidence ?? r.confidence ?? "0");
+  }
+
+  function render(rows) {
+    const parsed = rows
+      .map((r) => {
+        const ts = parseClipTimestamp(r.video_clip || "");
+        return { raw: r, ts, behavior: behaviorFromRow(r), conf: confFromRow(r) };
+      })
+      .filter((r) => r.ts)
+      .sort((a, b) => a.ts.dt - b.ts.dt);
+
+    // log table
+    const body = document.getElementById("logBody");
+    body.replaceChildren(
+      ...parsed.map((r) => {
+        const tr = document.createElement("tr");
+        const color = BEHAVIOR_COLOR[r.behavior] || "var(--fg-muted)";
+        tr.innerHTML = `
+          <td>${r.ts.dateStr}</td>
+          <td>${r.ts.timeStr}</td>
+          <td><span class="behavior-pill" style="background:color-mix(in srgb, ${color} 18%, transparent); color:${color}"><span class="dot" style="background:${color}"></span>${r.behavior}</span></td>
+          <td>
+            <div class="conf-bar-wrap">
+              <div class="conf-track"><div class="conf-fill" style="width:${(r.conf * 100).toFixed(0)}%; background:${color}"></div></div>
+              <span class="conf-pct">${(r.conf * 100).toFixed(0)}%</span>
+            </div>
+          </td>
+        `;
+        return tr;
+      })
+    );
+
+    // latest observation card
+    if (parsed.length > 0) {
+      const latest = parsed[parsed.length - 1];
+      const color = BEHAVIOR_COLOR[latest.behavior] || "var(--fg-muted)";
+      document.getElementById("latestDot").style.background = color;
+      document.getElementById("latestBehavior").textContent = latest.behavior;
+      document.getElementById("latestWhen").textContent = `${latest.ts.dateStr} at ${latest.ts.timeStr}`;
+    }
+
+    // breakdown bars
+    const counts = {};
+    parsed.forEach((r) => { counts[r.behavior] = (counts[r.behavior] || 0) + 1; });
+    const max = Math.max(1, ...Object.values(counts));
+    const barsEl = document.getElementById("breakdownBars");
+    barsEl.replaceChildren(
+      ...Object.entries(counts).map(([behavior, count]) => {
+        const color = BEHAVIOR_COLOR[behavior] || "var(--fg-muted)";
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        row.innerHTML = `
+          <span>${behavior}</span>
+          <div class="bar-track2"><div class="bar-fill2" style="width:${(count / max) * 100}%; background:${color}"></div></div>
+          <span>${count} clip${count === 1 ? "" : "s"}</span>
+        `;
+        return row;
+      })
+    );
+  }
+
+  // ---- saved real observations (the actual completed detection run) ----
+  const savedRows = [
+    { video_clip: "Eating_25690518092326646", predicted_behavior: "Eating", mean_confidence_3class: "0.97149247" },
+    { video_clip: "Locomotion_25690518091210873", predicted_behavior: "Locomotion", mean_confidence_3class: "0.9749965" },
+    { video_clip: "Locomotion_25690518091847591", predicted_behavior: "Locomotion", mean_confidence_3class: "0.7978505" },
+    { video_clip: "Resting_25690519194109670", predicted_behavior: "Resting", mean_confidence_3class: "0.66786" },
+  ];
+  render(savedRows);
+
+  document.getElementById("dataUpload").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    const status = document.getElementById("uploadStatus");
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCSV(reader.result);
+        if (rows.length === 0 || !rows[0].video_clip) throw new Error("no video_clip column found");
+        render(rows);
+        status.textContent = `loaded ${file.name} (${rows.length} observations)`;
+        status.className = "upload-status ok";
+      } catch (err) {
+        status.textContent = `couldn't read ${file.name} — check the file format`;
+        status.className = "upload-status err";
+      }
+    };
+    reader.readAsText(file);
+  });
+</script>
+</body>
+</html>
