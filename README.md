@@ -91,3 +91,19 @@ above:
 - `video_level_combined.csv` — both models' predictions side by side, one row per
   held-out clip (the file a dashboard should read)
 - `cmz_behavior_classifier_3class.keras` — the second trained model
+
+## Annotated videos (Section 12 — requested by the Ajarn)
+
+Instead of only a results table, Section 12 runs both trained models on **every frame**
+of the same 4 held-out validation clips and burns the detected behavior as a text label
+onto the video itself (top-left corner by default), so you can watch the clip and see
+the label change in real time — e.g. "Eating" while it's eating. Produces, per clip:
+
+- `annotated_videos/<clip>_annotated.mp4` — the original clip with the behavior label
+  overlaid on every frame
+- `annotated_videos/<clip>_frame_log.csv` — per-frame log: time, predicted behavior,
+  confidence, active/inactive
+- `annotated_videos/all_clips_frame_log.csv` — the 4 per-clip logs combined
+
+This reuses the models and video files already loaded earlier in the same Colab run —
+no new download or retraining needed. Takes roughly 1-2 minutes on a T4 GPU.
